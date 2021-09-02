@@ -275,6 +275,19 @@ bool TimeCache::insertData(const TransformStorage& new_data, std::string* error_
   }
   if (storage_it != storage_.end() && storage_it->stamp_ == new_data.stamp_)
   {
+    // Do not warn on completely redundant data.
+    // If we receive an exact duplicate transform, do nothing. Warning in this
+    // case is overly verbose. There are many cases where an exact duplicate
+    // may be received. When running simulations, for instance, code which
+    // simulates positions may run more than once in the same sensor cycle
+    // broadcasting duplicates. Also, some users of tf2_buffer pre-insert their
+    // transforms prior to publishing. If such users also subscribe to tf, they
+    // will receive a duplicate of what was pre-inserted into the buffer.
+    if (storage_it->translation_ == new_data.translation_ &&
+        storage_it->rotation_ == new_data.rotation_ )
+    {
+      return false;
+    }
     // Throttle TF_REPEATED_DATA error message to 10 seconds.
     // Console bridge does not have throttling, so implement throttling here.
     // Because insertData may be called prior to ros::Time being initialized,
